@@ -191,7 +191,7 @@ HeartbeatMonitor:
 | WebsiteBaseURL | If you have the PowerControllerViewer web app installed and running (see page 11), then enter the URL for the home page here. Assuming this is on the same machine as this installation, this will typically be http://127.0.0.1:8000. This app uses this URL to pass device state information to the web site. |
 | WebsiteAccessKey | If you have configured an access key for the PowerControllerViewer, configure it here. Alternatively, set the VIEWER_ACCESS_KEY environment variable. |
 | WebsiteTimeout | How long to wait for a reponse from the PowerControllerViewer when posting state information. |
-| DisableAllSwitches | If True, all switches will remain off |
+| DisableAllSwitches | If True, all switches will remain off. It will still be possible to turn the lights on using the web app or a switch input |
 
 ### Section: Website
 

@@ -475,11 +475,11 @@ class LightingController:
         """Evaluate desired state for every switch using the 4-level priority chain.
 
         Priority (highest first):
-          0. Global override (DisableAllSwitches)
           1. Webapp switch override (AppMode.ON / OFF)
           2. Webapp group override
           3. Input switch override
-          4. Scheduled state
+          4. Global override (DisableAllSwitches)
+          5. Scheduled state
 
         Updates self.switch_states in-place with ScheduledState, SystemState,
         StateReason, InputState, and NextChange. Does NOT change physical devices.
@@ -531,13 +531,8 @@ class LightingController:
                 group_mode = group["AppMode"] if group else AppMode.AUTO
                 switch_mode = state.get("AppMode", AppMode.AUTO)
 
-                # Priority 0: global override (issue 18)
-                if self.config.get("General", "DisableAllSwitches"):
-                    state["SystemState"] = SystemState.GLOBAL_OVERRIDE
-                    state["StateReason"] = StateReasonOff.GLOBAL_OVERRIDE
-                    state["DesiredState"] = "OFF"
                 # Priority 1: webapp switch override
-                elif switch_mode == AppMode.ON:
+                if switch_mode == AppMode.ON:
                     state["SystemState"] = SystemState.WEBAPP_SWITCH_OVERRIDE
                     state["StateReason"] = StateReasonOn.WEBAPP_SWITCH_ON
                     state["DesiredState"] = "ON"
@@ -564,7 +559,12 @@ class LightingController:
                     state["SystemState"] = SystemState.SCHEDULED
                     state["StateReason"] = StateReasonOff.SCHEDULED_OFF
                     state["DesiredState"] = "OFF"
-                # Priority 4: schedule
+                # Priority 4: global override (issue 18)
+                elif self.config.get("General", "DisableAllSwitches"):
+                    state["SystemState"] = SystemState.GLOBAL_OVERRIDE
+                    state["StateReason"] = StateReasonOff.GLOBAL_OVERRIDE
+                    state["DesiredState"] = "OFF"
+                # Priority 5: schedule
                 elif detail.get("reason") == "DatesOff":
                     state["SystemState"] = SystemState.DATE_OFF
                     state["StateReason"] = StateReasonOff.DATE_OFF
