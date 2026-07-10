@@ -208,6 +208,12 @@ Configure the web interface for the LightingControl utility. This is optional bu
 
 In this section you can configure one or more Shelly and/or Tasmota smart switches. See the [Smart Devices library](https://nickelseyspelloc.github.io/sc-smart-device/) for details on how to configure this section.
 
+Webhook call example:
+
+```bash
+curl "http://192.168.86.10:8787/shelly/webhook?Event=input.toggle_on&DeviceID=1&ObjectType=input&ComponentID=2"
+```
+
 ### Section: Location
 
 Use this section to specify the geographic location and timezone of your installation. This is used to determine the dawn and dusk times for lighting control. You can do this in one of three ways:

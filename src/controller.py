@@ -554,7 +554,7 @@ class LightingController:
                     state["SystemState"] = SystemState.INPUT_OVERRIDE
                     state["StateReason"] = StateReasonOn.INPUT_SWITCH_ON
                     state["DesiredState"] = "ON"
-                elif input_state == "OFF" and webhook_event is None and scheduled_state == "OFF" and detail.get("reason") != "DatesOff":
+                elif input_state == "OFF" and webhook_event is None and scheduled_state == "OFF" and detail.get("reason") != "DatesOff" and not self.config.get("General", "DisableAllSwitches"):
                     # Input went OFF and schedule is OFF: revert
                     state["SystemState"] = SystemState.SCHEDULED
                     state["StateReason"] = StateReasonOff.SCHEDULED_OFF
