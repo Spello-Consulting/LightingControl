@@ -399,4 +399,3 @@ sudo systemctl start LightingControl    # start now
 ```bash
 journalctl -u LightingControl -f
 ```
-
