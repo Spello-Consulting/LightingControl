@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any
 
 import uvicorn
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
@@ -235,17 +234,6 @@ def create_asgi_app(
                 await task
 
     app = FastAPI(lifespan=_lifespan)
-    # Chrome's Private Network Access (PNA) checks can block requests from a
-    # public/secure context to a device on the local network (e.g. the Pi).
-    # Responding to the CORS preflight with Access-Control-Allow-Private-Network
-    # lets Chrome proceed. See issue #22.
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-        allow_private_network=True,
-    )
     app.mount("/static", StaticFiles(directory=str(repo_root / "static")), name="static")
     _register_routes(app, controller, config, logger, templates, manager, notifier)
 
