@@ -550,7 +550,7 @@ class LightingController:
                     state["StateReason"] = StateReasonOff.WEBAPP_GROUP_OFF
                     state["DesiredState"] = "OFF"
                 # Priority 3: input override
-                elif input_state == "ON" and scheduled_state == "OFF":
+                elif input_state == "ON" and (scheduled_state == "OFF" or self.config.get("General", "DisableAllSwitches")):
                     state["SystemState"] = SystemState.INPUT_OVERRIDE
                     state["StateReason"] = StateReasonOn.INPUT_SWITCH_ON
                     state["DesiredState"] = "ON"
