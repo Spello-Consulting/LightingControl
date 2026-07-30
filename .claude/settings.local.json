@@ -7,7 +7,11 @@
       "Bash(uv run python -c ' *)",
       "Bash(python -c \"import sc_smart_device; print\\([x for x in dir\\(sc_smart_device\\) if not x.startswith\\('_'\\)]\\)\")",
       "Bash(uv run *)",
-      "Read(//Users/nick/dev/sc-smart-device/**)"
+      "Read(//Users/nick/dev/sc-smart-device/**)",
+      "WebFetch(domain:github.com)",
+      "Bash(.venv/bin/python -c \"import starlette, fastapi; print\\('starlette', starlette.__version__\\); print\\('fastapi', fastapi.__version__\\)\")",
+      "Bash(.venv/bin/python -c \"import inspect; from starlette.middleware.cors import CORSMiddleware; print\\(inspect.signature\\(CORSMiddleware.__init__\\)\\)\")",
+      "Bash(.venv/bin/python -c \"import starlette.middleware.cors as m; print\\(m.__file__\\)\")"
     ]
   }
 }
