@@ -360,6 +360,8 @@ Create a new service file at _/etc/systemd/system/LightingControl.service_. Edit
 [Unit]
 Description=Lighting Control app
 After=network.target
+StartLimitIntervalSec=20
+StartLimitBurst=5
 
 [Service]
 ExecStart=/home/pi/scripts/LightingControl/launch.sh
@@ -369,15 +371,10 @@ StandardError=journal
 User=pi
 Environment=PYTHONUNBUFFERED=1
 Environment=PATH=/home/pi/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-# Logging and restart behavior
-Restart=on-failure        # Only restart on non-zero exit code
-RestartSec=10             # Wait 10 seconds before restarting
-
-# Limit restart attempts (3 times in 60 seconds)
-StartLimitIntervalSec=60
-StartLimitBurst=3
-
+# Only restart on non-zero exit code
+Restart=on-failure
+# Wait 10 seconds before restarting
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
