@@ -11,6 +11,17 @@
                 "panel": "shared"
             },
             "problemMatcher": []
+        },
+        {
+            "label": "clean-env",
+            "type": "shell",
+            "command": "rm",
+            "args": ["-f", "${workspaceFolder}/.env"],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "problemMatcher": []
         }
     ]
 }

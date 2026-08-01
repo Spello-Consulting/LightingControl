@@ -22,7 +22,7 @@ The Lighting Control app is a Python-based automation tool that allowa you to co
 * UV for Python installed:
 `brew install uvicorn`
 
-The shell script used to run the app (*launch.sh*) is uses the *uv sync* command to ensure that all the prerequitie Python packages are installed in the virtual environment.
+The shell script used to run the app (*scripts/launch.sh*) is uses the *uv sync* command to ensure that all the prerequitie Python packages are installed in the virtual environment.
 
 ## Running on Mac
 If you're running the Python script on macOS, you need to allow the calling application (Terminal, Visual Studio) to access devices on the local network: *System Settings > Privacy and Security > Local Network*

@@ -12,8 +12,9 @@
             "program": "src/main.py",
             "console": "integratedTerminal",
             "preLaunchTask": "build-env",
+            "postDebugTask": "clean-env",
             "envFile": "${workspaceFolder}/.env",
-            "args": ["--config", "configs/config.yaml"]            
+            "args": ["--config", "configs/config.yaml"]
         }
     ]
 }
