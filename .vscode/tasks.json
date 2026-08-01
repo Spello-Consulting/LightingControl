@@ -4,8 +4,13 @@
         {
             "label": "build-env",
             "type": "shell",
-            "command": "${workspaceFolder}/../pyutil/build_env.sh",
-            "args": ["${workspaceFolder}"],
+            "command": "op",
+            "args": [
+                "inject",
+                "-i", "${workspaceFolder}/.env.template",
+                "-o", "${workspaceFolder}/.env",
+                "-f"
+            ],
             "presentation": {
                 "reveal": "silent",
                 "panel": "shared"
