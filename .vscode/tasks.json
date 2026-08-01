@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-env",
+            "type": "shell",
+            "command": "${workspaceFolder}/../pyutil/build_env.sh",
+            "args": ["${workspaceFolder}"],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

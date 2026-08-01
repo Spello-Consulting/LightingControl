@@ -4,7 +4,6 @@ __pycache__/
 .python-version
 .ruff_cache/
 .venv/
-.vscode/
 *.egg
 *.egg-info
 *.py[oc]
@@ -20,15 +19,9 @@ wheels/
 .cache_ggshield
 
 # App 
-archive/
-/*.csv
-/*.json
-/*.txt
-hold
 logs/*
+configs/*
+simulation_files/*
 config.yaml
-simulation_data
-saved_data
 system_state.json
-configs
-simulation_files
+simulation_data

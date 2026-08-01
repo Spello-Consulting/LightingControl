@@ -1,0 +1,22 @@
+[Unit]
+Description=Lighting Control app
+After=network.target
+StartLimitIntervalSec=20
+StartLimitBurst=5
+
+[Service]
+ExecStart=/home/pi/scripts/LightingControl/launch.sh
+WorkingDirectory=/home/pi/scripts/LightingControl
+StandardOutput=journal
+StandardError=journal
+User=pi
+EnvironmentFile=/home/pi/.config/op/service-account-token
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/home/pi/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Only restart on non-zero exit code
+Restart=on-failure
+# Wait 10 seconds before restarting
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

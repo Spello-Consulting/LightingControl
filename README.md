@@ -355,29 +355,11 @@ This section shows you how to configure the app to run automatically at boot on 
 
 ## 1. Create a service file
 
-Create a new service file at _/etc/systemd/system/LightingControl.service_. Edit the content below as appropriate
-```
-[Unit]
-Description=Lighting Control app
-After=network.target
-StartLimitIntervalSec=20
-StartLimitBurst=5
+Create a new service file and edit it to review:
+```bash
+sudo cp deploy/LightingControl.service /etc/systemd/system/LightingControl.service
 
-[Service]
-ExecStart=/home/pi/scripts/LightingControl/launch.sh
-WorkingDirectory=/home/pi/scripts/LightingControl
-StandardOutput=journal
-StandardError=journal
-User=pi
-Environment=PYTHONUNBUFFERED=1
-Environment=PATH=/home/pi/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-# Only restart on non-zero exit code
-Restart=on-failure
-# Wait 10 seconds before restarting
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
+sudo nano /etc/systemd/system/LightingControl.service
 ```
 
 
@@ -388,7 +370,6 @@ sudo systemctl daemon-reexec       # re-executes systemd in case of changes
 sudo systemctl daemon-reload       # reload service files
 sudo systemctl enable LightingControl   # enable on boot
 sudo systemctl start LightingControl    # start now
-
 ```
 
 ## 3. View logs
