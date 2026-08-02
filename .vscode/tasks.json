@@ -7,7 +7,7 @@
             "command": "op",
             "args": [
                 "inject",
-                "-i", "${workspaceFolder}/.env.template",
+                "-i", "${workspaceFolder}/.env.dev.template",
                 "-o", "${workspaceFolder}/.env",
                 "-f"
             ],

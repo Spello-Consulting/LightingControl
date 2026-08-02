@@ -68,7 +68,11 @@ export PYTHONUNBUFFERED=1
 # launcher — uv sync, logging, etc. — not just the final app process, and no
 # plaintext .env is ever written to the filesystem.
 # -------------------------------------------------------------------------
-EnvTemplate="$HomeDir/.env.template"
+# .env.target is a per-deployment pointer (copy or symlink) to one of the tracked
+# templates, .env.dev.template or .env.prod.template. It is gitignored so each
+# checkout (dev vs prod) selects its own environment without shipping the choice
+# in git. The selected template carries APP_ENV, which is verified after injection.
+EnvTemplate="$HomeDir/.env.target"
 
 if [ -z "${_LAUNCH_OP_INJECTED:-}" ] && [ -f "$EnvTemplate" ]; then
   # Load the 1Password service-account token explicitly if present — don't rely
@@ -81,6 +85,13 @@ if [ -z "${_LAUNCH_OP_INJECTED:-}" ] && [ -f "$EnvTemplate" ]; then
     # shellcheck disable=SC1090
     . "$HOME/.config/op/service-account-token"
     set +a
+    # With a service-account token, op authenticates directly to 1Password and
+    # never needs the desktop app. Disable biometric/app integration so op does
+    # NOT probe the 1Password desktop app's container — that access is what
+    # triggers the macOS "op would like to access data from other apps" TCC
+    # prompt on every run (the grant can't persist under a LaunchAgent). Scoped
+    # to this invocation, so interactive dev use of op elsewhere is unaffected.
+    export OP_BIOMETRIC_UNLOCK_ENABLED=false    
   fi
 
   if ! command -v op >/dev/null 2>&1; then
@@ -114,6 +125,18 @@ if [ -f "$EnvFile" ]; then
   set +a
 fi
 
+# Environment guard: APP_ENV is injected from the selected .env.target template
+# (development or production). Refuse to run if it is missing — that means no
+# template was resolved (.env.target absent or dangling); we must never run
+# without knowing which environment we're in.
+if [ -z "${APP_ENV:-}" ]; then
+  echo "[launcher] Error: APP_ENV is not set — refusing to run. Ensure .env.target points to .env.dev.template or .env.prod.template." >&2
+  exit 1
+fi
+if [ "$APP_ENV" = "development" ]; then
+  echo "[launcher] WARNING: APP_ENV=development — running with development settings." >&2
+fi
+
 # Get the script name from pyproject.toml
 if [ -f "$PYPROJECT" ]; then
   ScriptName=$(grep -E '^launch_path *= *"' "$PYPROJECT" | head -1 | sed -E 's/^launch_path *= *"([^"]+)".*$/\1/')
@@ -145,6 +168,20 @@ if [[ $(uname -m) == "armv7l" || $(uname -m) == "aarch64" ]]; then
   fi
 fi
 
+# If APP_CONFIG is set and --config hasn't been passed to this script, add it to the uv run command line. This allows systemd service files to set APP_CONFIG without needing to hardcode --config in the service file.
+if [ -n "${APP_CONFIG:-}" ]; then
+  config_passed=false
+  for arg in "$@"; do
+    if [[ "$arg" == "--config" ]]; then
+      config_passed=true
+      break
+    fi
+  done
+  if [ "$config_passed" = false ]; then
+    set -- "$@" "--config" "$APP_CONFIG"
+  fi
+fi
+
 # Make sure deps are synced before starting
 if ! "$UVCmd" sync; then
   echo "[launcher] uv sync failed — not starting app." >&2
@@ -158,7 +195,8 @@ term_handler() {
 }
 trap term_handler SIGINT SIGTERM
 
-echo "[launcher] Starting app with uv run $ScriptName from directory $HomeDir ..."
+echo "[launcher] Starting app with uv run $ScriptName from directory $HomeDir"
+echo "[launcher] Command line: $UVCmd run $ScriptName $*"
 "$UVCmd" run "$ScriptName" "$@"
 app_rc=$?
 
