@@ -336,6 +336,12 @@ The app will first look for these files in the current working directory and fai
 
 # Running the App
 
+Setup the environment file:
+
+```
+ln -s .env.prod.template .env.target
+```
+
 Initially, you can run the app from the command line: 
 
 ```bash
