@@ -1,0 +1,171 @@
+# This is the configuration file for the LightingControl utility 
+
+General:
+  # The name of the application
+  AppName: LightingControl Dev
+  # Number of seconds to wait before checking the schedules again
+  CheckInterval: 4
+
+ViewerWebsite:
+  # Enable or disable posting to the web viewer app
+  Enable: False
+  # BaseURL: http://192.168.86.249:8000
+  BaseURL: https://power.elseyworld.com
+  APITimeout: 20
+  # How often to post the state to the web viewer app (in seconds)
+  Frequency: 10
+
+# Use this section to configure your Smart devices used to control the lights
+# See this page for more information: https://nickelseyspelloc.github.io/sc-smart-device/
+SCSmartDevices:
+  AllowDebugLogging: False
+  ResponseTimeout: 3
+  RetryCount: 1
+  RetryDelay: 2
+  PingAllowed: True
+  SimulationFileFolder: simulation_data
+  ShellyWebhooks:
+    Enabled: True
+    Host: 192.168.86.47
+    Port: 8787
+    Path: /shelly/webhook
+    DefaultWebhooks:
+      Inputs:
+        - input.toggle_on
+        - input.toggle_off
+  Devices:
+    - Name: Spello Dev
+      Model: Shelly2PMG3
+      Hostname: 192.168.86.30
+      Simulate: True
+      Inputs:
+        - Name: "Spello Dev I1"
+          Webhooks: True
+        - Name: "Spello Dev I2"
+      Outputs:
+        - Name: "Spello Dev S1"
+          Group: Patio
+        - Name: "Spello Dev S2"
+          Group: Patio
+    - Name: Sydney Dev B
+      Model: Tasmota
+      Hostname: 192.168.86.37
+      Simulate: True
+      ExpectOffline: True
+      Outputs:
+        - Name: "Sydney Dev B O1"
+          Group: "Nighttime"
+      Meters:
+        - Name: "Sydney Dev B M1"
+    - Name: Spello Mock A
+      Model: Shelly2PMG3
+      Simulate: True
+      Inputs:
+        - Name: "Spello A.I1"
+        - Name: "Spello A.I2"
+      Outputs:
+        - Name: "Spello A.1"
+        - Name: "Spello A.2"
+    - Name: Spello Mock B
+      Model: Shelly2PMG3
+      Simulate: True
+      Outputs:
+        - Name: "Spello B.1"
+          Group: Nighttime
+        - Name: "Spello B.2"
+          Group: Nighttime
+    - Name: Spello Mock C
+      Model: Shelly2PMG3
+      Simulate: True
+      Outputs:
+        - Name: "Spello C.1"
+          Group: Nighttime
+        - Name: "Spello C.2"
+          Group: Nighttime
+
+
+Location:
+  Timezone: Australia/Sydney
+  GoogleMapsURL: https://www.google.com/maps/place/Sydney+NSW/@-33.8478053,150.602357,10z
+
+
+# Define one or more lighting schedules that are used to control the light switches and groups defined under LightingControl
+Schedules:
+  - Name: Normal Lighting
+    Events: 
+      - TurnOn: "08:10"
+        TurnOff: "08:30"
+        DaysOfWeek: All
+      - TurnOn: "10:10"
+        TurnOff: "23:30"
+        DaysOfWeek: All
+  - Name: Dusk to Dawn
+    Events: 
+      - TurnOn: Dusk
+        TurnOff: Dawn-00:30
+        RandomOffset: 60
+        DaysOfWeek: Sat,Sun,Tue
+      - TurnOn: "08:00"
+        TurnOff: "18:00"
+        RandomOffset: 30
+        DaysOfWeek: Sat,Sun
+        DatesOff: 
+        - StartDate: 2024-07-01
+          EndDate: 2024-08-30
+  - Name: Patio
+    Events: 
+      - TurnOn: "10:00"
+        TurnOff: "20:30"
+        DaysOfWeek: All
+
+# Maps switches or groups of switches to a lighting schedule
+LightingControl:
+  - Type: Default
+    Schedule: Normal Lighting
+  - Type: Switch
+    Target: Spello A.1
+    Schedule: Normal Lighting
+  - Type: Switch Group
+    Target: Nighttime
+    Schedule: Dusk to Dawn
+  - Type: Switch Group
+    Target: Patio
+    Schedule: Patio
+
+# Optional. Map Shelly inputs to lighting control actions. If an input is mapped to a switch or switch group 
+# then the lights in that target will be On when the input is on, regardless of the schedule 
+InputControls:
+  - Type: Switch   
+    Target: Spello Dev S1
+    Input: Spello Dev I1
+  - Type: Switch Group
+    Target: Nighttime
+    Input: Spello Dev I2
+  # - Type: Default
+  #   Input: Spello A.I1
+
+
+Files:
+  # The name of the saved state file. This is used to store the state of the device between runs.
+  SavedStateFile: system_state.json
+  LogfileName: logs/logfile.log
+  LogfileMaxLines: 1000
+  LogProcessID: True
+  LogfileVerbosity: debug
+  ConsoleVerbosity: debug
+  MaxDaysSwitchChangeHistory: 14
+
+
+# Enter your settings here if you want to be emailed when there's a critical error 
+Email:
+  EnableEmail: True
+  SendEmailsTo: nick@elseyworld.com
+  SMTPServer: smtp.gmail.com
+  SMTPPort: 587
+  SubjectPrefix: "[Dev Lighting Control]: "
+
+
+HeartbeatMonitor:
+  Enable: False
+  WebsiteURL: https://uptime.betterstack.com/api/v1/heartbeat/VBxnh8s7RgwemUbbszYZwHum
+  HeartbeatTimeout: 5

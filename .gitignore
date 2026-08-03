@@ -20,9 +20,7 @@ wheels/
 
 # App 
 logs/*
-configs/*
 simulation_files/*
-config.yaml
 system_state.json
 simulation_data
 .env.target

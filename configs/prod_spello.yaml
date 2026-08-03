@@ -1,0 +1,147 @@
+# This is the configuration file for the LightingControl utility 
+
+General:
+  AppName: Spello Lights
+  CheckInterval: 20
+  DisableAllSwitches: True
+
+Website:
+  Enable: True
+  HostingIP: 0.0.0.0
+  Port: 8083
+  PageAutoRefresh: 30
+
+
+SCSmartDevices:
+  ResponseTimeout: 8
+  RetryCount: 3
+  RetryDelay: 3
+  PingAllowed: True
+  SimulationFileFolder: simulation_files
+  ShellyWebhooks:
+    Enabled: True
+    Host: 192.168.86.234
+    Port: 8787
+    Path: /shelly/webhook
+    DefaultWebhooks:
+      Inputs:
+        - input.toggle_on
+        - input.toggle_off
+  Devices:
+    - Name: Spello Kitchen
+      Model: Shelly2PMG3
+      ExpectOffline: True
+      Hostname: 192.168.86.37
+      Outputs:
+        - Name: Spello Kitchen Patio
+          Group: Patio
+        - Name: Spello Driveway
+          Group: Driveway
+    - Name: Spello Main Entry
+      Model: Shelly2PMG3
+      ExpectOffline: True
+      Hostname: 192.168.86.38
+      Outputs:
+        - Name: Spello Living Room
+          Group: Living Room
+        - Name: Spello Front Door
+          Group: Patio
+    - Name: Spello Patio
+      Model: Shelly2LG3
+      ExpectOffline: True
+      Hostname: 192.168.86.41
+      Inputs:
+        - Name: Spello Patio Rear Input
+          Webhooks: True
+        - Name: Spello Patio Front Input
+          Webhooks: True
+      Outputs:
+        - Name: Spello Patio Rear
+          Group: Patio
+        - Name: Spello Patio Front
+          Group: Patio
+
+Location:
+  Timezone: Europe/Rome
+  Latitude: 42.7500
+  Longitude: 12.7000
+
+Schedules:
+  - Name: Patio Lights
+    Events: 
+      - TurnOn: "Dusk-00:30"
+        TurnOff: "Dawn-01:00"
+        RandomOffset: 8
+        DaysOfWeek: All
+  - Name: Driveway Lights
+    Events: 
+      - TurnOn: "Dusk-00:15"
+        TurnOff: "23:45"
+        RandomOffset: 10
+        DaysOfWeek: All
+  - Name: Living Room
+    Events: 
+      - TurnOn: "Dusk-01:30"
+        TurnOff: "Dawn-04:00"
+        RandomOffset: 10
+        DaysOfWeek: All
+          
+LightingControl:
+  - Type: Default
+    Schedule: Patio Lights
+  - Type: Switch Group
+    Target: Patio
+    Schedule: Patio Lights
+  - Type: Switch Group
+    Target: Driveway
+    Schedule: Driveway Lights
+  - Type: Switch Group
+    Target: Living Room
+    Schedule: Living Room
+
+InputControls:
+  - Type: Switch   
+    Target: Spello Patio Rear
+    Input: Spello Patio Rear Input
+  - Type: Switch   
+    Target: Spello Patio Front
+    Input: Spello Patio Front Input
+
+
+Files:
+  # The name of the saved state file. This is used to store the state of the device between runs.
+  SavedStateFile: system_state.json
+  LogfileName: logs/logfile.log
+  LogfileMaxLines: 50000
+  # How much information do we write to the log file. One of: none; error; warning; summary; detailed; debug
+  LogfileVerbosity: debug
+  # How much information do we write to the console. One of: error; warning; summary; detailed; debug
+  ConsoleVerbosity: debug
+  # The state file keeps a log of the switch state changes. This option controls how many days of history we keep. Defaults to 30 days.
+  MaxDaysSwitchChangeHistory: 14
+
+# Enter your settings here if you want to be emailed when there's a critical error 
+Email:
+  EnableEmail: True
+  SendEmailsTo: nick@elseyworld.com
+  SMTPServer: smtp.gmail.com
+  SMTPPort: 587
+  SubjectPrefix: "[Spello Lights]: "
+
+
+ViewerWebsite:
+  # Enable or disable posting to the web viewer app
+  Enable: True
+  BaseURL: https://power.elseyworld.com
+  APITimeout: 20
+  # How often to post the state to the web viewer app (in seconds)
+  Frequency: 60
+
+
+HeartbeatMonitor:
+  Enable: True
+  # The URL of the website to monitor for availability
+  WebsiteURL: https://uptime.betterstack.com/api/v1/heartbeat/VBxnh8s7RgwemUbbszYZwHum
+  # How long to wait for a response from the website before considering it down in seconds
+  HeartbeatTimeout: 5
+  Frequency: 20

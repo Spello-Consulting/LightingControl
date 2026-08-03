@@ -23,12 +23,6 @@ dev = [
 ]
 
 
-[dev.env.sync]
-remote="~/Library/CloudStorage/Dropbox/Development/dev_setup/app_config/LightingControl"
-patterns = [
-    "configs/*",
-]
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 

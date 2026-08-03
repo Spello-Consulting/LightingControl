@@ -1,0 +1,147 @@
+# This is the configuration file for the LightingControl utility 
+
+General:
+  # The name of the application
+  AppName: Sydney Lights
+  # Number of seconds to wait before checking the schedules again
+  CheckInterval: 60
+
+Website:
+  Enable: True
+  HostingIP: 0.0.0.0
+  Port: 8083
+  PageAutoRefresh: 30
+
+
+SCSmartDevices:
+  ResponseTimeout: 8
+  RetryCount: 3
+  RetryDelay: 3
+  PingAllowed: True
+  Devices:
+    - Name: Tasmota01 Living Room
+      Model: Tasmota
+      Simulate: False
+      ExpectOffline: True
+      Hostname: 192.168.86.37
+      Outputs:
+        - Name: Media Center Light
+          Group: Living Room
+    - Name: Tasmota02 Living Room
+      Model: Tasmota
+      Simulate: False
+      ExpectOffline: True
+      Hostname: 192.168.86.41
+      Outputs:
+        - Name: Breakfast Area Light
+          Group: Living Room
+    - Name: Tasmota03 Master Bed
+      Model: Tasmota
+      Simulate: False
+      ExpectOffline: True
+      Hostname: 192.168.86.51
+      Outputs:
+        - Name: Master Bed Light
+          Group: Master Bed
+    - Name: Tasmota04 Studio
+      Model: Tasmota
+      Simulate: False
+      ExpectOffline: True
+      Hostname: 192.168.86.52
+      Outputs:
+        - Name: Studio Light
+          Group: Studio
+
+
+Location:
+  Timezone: Australia/Sydney
+  GoogleMapsURL: https://www.google.com/maps/place/Sydney+NSW/@-33.8478053,150.602357,10z
+
+
+LightingControl:
+  - Type: Default
+    Schedule: Living Room
+  - Type: Switch Group
+    Target: Living Room
+    Schedule: Living Room
+  - Type: Switch Group
+    Target: Master Bed
+    Schedule: Master Bed
+  - Type: Switch Group
+    Target: Studio
+    Schedule: Studio
+
+
+Schedules:
+  - Name: Living Room
+    Events:
+      - TurnOn: "Dawn+01:10"
+        TurnOff: "08:20"
+        RandomOffset: 10
+        DaysOfWeek: All
+      - TurnOn: "Dusk-00:30"
+        TurnOff: "23:30"
+        RandomOffset: 10
+        DaysOfWeek: All
+  - Name: Master Bed
+    Events:
+      - TurnOn: "07:30"
+        TurnOff: "08:00"
+        RandomOffset: 10
+        DaysOfWeek: All
+      - TurnOn: "21:30"
+        TurnOff: "23:45"
+        RandomOffset: 20
+        DaysOfWeek: All
+  - Name: Studio
+    Events:
+      - TurnOn: "20:30"
+        TurnOff: "23:00"
+        RandomOffset: 20
+        DaysOfWeek: All
+
+
+InputControls:
+  - Type: Switch
+    Target: Spello Dev S1
+    Input: Spello Dev I1
+
+
+
+Files:
+  # The name of the saved state file. This is used to store the state of the device between runs.
+  SavedStateFile: system_state.json
+  LogfileName: logs/logfile.log
+  LogfileMaxLines: 20000
+  # How much information do we write to the log file. One of: none; error; warning; summary; detailed; debug
+  LogfileVerbosity: debug
+  # How much information do we write to the console. One of: error; warning; summary; detailed; debug
+  ConsoleVerbosity: debug
+  # The state file keeps a log of the switch state changes. This option controls how many days of history we keep. Defaults to 30 days.
+  MaxDaysSwitchChangeHistory: 14
+
+# Enter your settings here if you want to be emailed when there's a critical error 
+Email:
+  EnableEmail: True
+  SendEmailsTo: nick@elseyworld.com
+  SMTPServer: smtp.gmail.com
+  SMTPPort: 587
+  SubjectPrefix: "[Sydney Lights]: "
+
+
+ViewerWebsite:
+  # Enable or disable posting to the web viewer app
+  Enable: True
+  BaseURL: https://power.elseyworld.com
+  APITimeout: 20
+  # How often to post the state to the web viewer app (in seconds)
+  Frequency: 60
+
+
+HeartbeatMonitor:
+  Enable: True
+  # The URL of the website to monitor for availability
+  WebsiteURL: https://uptime.betterstack.com/api/v1/heartbeat/4oQuXJnx8aos6ZeKUZqJci4x
+  # How long to wait for a response from the website before considering it down in seconds
+  HeartbeatTimeout: 5
+  Frequency: 20
