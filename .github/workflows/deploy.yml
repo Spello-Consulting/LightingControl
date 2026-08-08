@@ -16,7 +16,7 @@ jobs:
   deploy-sydneyapp:
     name: Deploy → sydneyapp
     if: ${{ inputs.environment == 'sydneyapp' || inputs.environment == 'both' }}
-    runs-on: sydneyapp
+    runs-on: [self-hosted, sydneyapp]
     environment: sydneyapp        # triggers approval gate if configured in GitHub
     steps:
       - name: Pull latest from GitHub
@@ -33,7 +33,7 @@ jobs:
   deploy-pi-spello:
     name: Deploy → pi-spello
     if: ${{ inputs.environment == 'pi-spello' || inputs.environment == 'both' }}
-    runs-on: pi-spello
+    runs-on: [self-hosted, pi-spello]
     environment: pi-spello
     steps:
       - name: Pull latest from GitHub
