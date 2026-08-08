@@ -1,0 +1,48 @@
+name: Deploy LightingControl
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - sydneyapp
+          - pi-spello
+          - both
+
+jobs:
+  deploy-sydneyapp:
+    name: Deploy → sydneyapp
+    if: ${{ inputs.environment == 'sydneyapp' || inputs.environment == 'both' }}
+    runs-on: sydneyapp
+    environment: sydneyapp        # triggers approval gate if configured in GitHub
+    steps:
+      - name: Pull latest from GitHub
+        run: sudo git -C /home/nick/scripts/LightingControl pull
+
+      - name: Restart service
+        run: sudo systemctl restart LightingControl
+
+      - name: Verify service is running
+        run: |
+          sleep 6
+          sudo systemctl is-active LightingControl
+
+  deploy-pi-spello:
+    name: Deploy → pi-spello
+    if: ${{ inputs.environment == 'pi-spello' || inputs.environment == 'both' }}
+    runs-on: pi-spello
+    environment: pi-spello
+    steps:
+      - name: Pull latest from GitHub
+        run: sudo git -C /home/pi/scripts/LightingControl pull
+
+      - name: Restart service
+        run: sudo systemctl restart LightingControl
+
+      - name: Verify service is running
+        run: |
+          sleep 6
+          sudo systemctl is-active LightingControl

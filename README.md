@@ -363,7 +363,7 @@ This section shows you how to configure the app to run automatically at boot on 
 
 Create a new service file and edit it to review:
 ```bash
-sudo cp deploy/LightingControl.service /etc/systemd/system/LightingControl.service
+sudo cp deploy/<env>/LightingControl.service /etc/systemd/system/LightingControl.service
 
 sudo nano /etc/systemd/system/LightingControl.service
 ```
