@@ -1,0 +1,17 @@
+name: Test Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options:
+          - pi-spello
+          - sydneyapp
+
+jobs:
+  test:
+    runs-on: [self-hosted, "${{ inputs.environment }}"]
+    steps:
+      - name: Hello
+        run: echo "Runner is working on $(hostname)"
