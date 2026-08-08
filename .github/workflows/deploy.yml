@@ -28,7 +28,7 @@ jobs:
       - name: Verify service is running
         run: |
           sleep 6
-          sudo systemctl is-active LightingControl
+          systemctl is-active LightingControl
 
   deploy-pi-spello:
     name: Deploy → pi-spello
@@ -45,4 +45,4 @@ jobs:
       - name: Verify service is running
         run: |
           sleep 6
-          sudo systemctl is-active LightingControl
+          systemctl is-active LightingControl
