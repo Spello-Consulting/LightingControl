@@ -3,6 +3,7 @@
 import argparse
 import os
 import platform
+import signal
 import sys
 from pathlib import Path
 from threading import Event
@@ -208,6 +209,13 @@ def main():  # noqa: PLR0912, PLR0914, PLR0915
         )
 
     tm.start_all()
+
+    def _handle_sigterm(signum, frame):
+        logger.log_message("SIGTERM received. Shutting down...", "summary")
+        stop_event.set()
+        wake_event.set()
+
+    signal.signal(signal.SIGTERM, _handle_sigterm)
 
     try:
         while not stop_event.is_set():
