@@ -46,19 +46,15 @@ jobs:
     steps:
       - name: Stop the service
         run: |
-          cd /home/pi/scripts/LightingControl
-          sudo /home/pi/scripts/pyutil/servicectrl.sh stop
+          sudo --chdir=/home/pi/scripts/LightingControl /home/pi/scripts/pyutil/servicectrl.sh stop
 
       - name: Pull latest from GitHub
         run: sudo git -C /home/pi/scripts/LightingControl pull
 
       - name: Deploy and start the service
-        run: |
-          cd /home/pi/scripts/LightingControl
-          sudo /home/pi/scripts/pyutil/servicectrl.sh deploy pi-spello
+        run: sudo --chdir=/home/pi/scripts/LightingControl /home/pi/scripts/pyutil/servicectrl.sh deploy pi-spello
 
       - name: Verify service is running
         run: |
           sleep 6
-          cd /home/pi/scripts/LightingControl
-          sudo /home/pi/scripts/pyutil/servicectrl.sh is-active
+          sudo --chdir=/home/pi/scripts/LightingControl /home/pi/scripts/pyutil/servicectrl.sh is-active
