@@ -210,7 +210,7 @@ def main():  # noqa: PLR0912, PLR0914, PLR0915
 
     tm.start_all()
 
-    def _handle_sigterm(signum, frame):
+    def _handle_sigterm(_signum, _frame):
         logger.log_message("SIGTERM received. Shutting down...", "summary")
         stop_event.set()
         wake_event.set()
