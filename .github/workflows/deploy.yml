@@ -24,7 +24,9 @@ jobs:
           sudo --chdir=/home/nick/scripts/LightingControl /home/nick/scripts/pyutil/servicectrl.sh stop
 
       - name: Pull latest from GitHub
-        run: sudo git -C /home/nick/scripts/LightingControl pull
+        run: |
+          sudo --chdir=/home/nick/scripts/LightingControl /home/nick/scripts/pyutil/gitrefresh.sh --yes
+
 
       - name: Deploy and start the service
         run: sudo --chdir=/home/nick/scripts/LightingControl /home/nick/scripts/pyutil/servicectrl.sh deploy sydneyapp
@@ -45,7 +47,8 @@ jobs:
           sudo --chdir=/home/pi/scripts/LightingControl /home/pi/scripts/pyutil/servicectrl.sh stop
 
       - name: Pull latest from GitHub
-        run: sudo git -C /home/pi/scripts/LightingControl pull
+        run: |
+          sudo --chdir=/home/pi/scripts/LightingControl /home/pi/scripts/pyutil/gitrefresh.sh --yes
 
       - name: Deploy and start the service
         run: sudo --chdir=/home/pi/scripts/LightingControl /home/pi/scripts/pyutil/servicectrl.sh deploy pi-spello
