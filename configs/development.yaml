@@ -6,6 +6,12 @@ General:
   # Number of seconds to wait before checking the schedules again
   CheckInterval: 4
 
+Website:
+  Enable: True
+  HostingIP: 0.0.0.0
+  Port: 8083
+  PageAutoRefresh: 10
+
 ViewerWebsite:
   # Enable or disable posting to the web viewer app
   Enable: False

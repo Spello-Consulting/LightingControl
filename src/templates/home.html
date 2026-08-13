@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="group-list">
+  {% for group_id, group in groups.items() %}
+  <div class="card" data-group-id="{{ group.id }}" data-group-name="{{ group.name }}">
+    <div class="card-header">
+      <div class="group-info">
+        <div class="group-title">{{ group.name }}</div>
+        <div class="group-meta">
+          Schedule: <strong data-field="schedule">{{ group.schedule }}</strong>
+          &nbsp;|&nbsp;
+          State: <span class="status-badge {{ 'on' if group.scheduled_state == 'ON' else 'off' }}" data-field="scheduled_state">
+            {{ group.scheduled_state }}
+          </span>
+          &nbsp;|&nbsp;
+          Next change: <span data-field="next_change">{{ group.next_change or '—' }}</span>
+        </div>
+      </div>
+      <div class="button-group">
+        <button class="mode-button {{ 'active' if group.mode == 'on' else '' }}"
+                data-mode="on" onclick="setGroupMode(this, 'on')">On</button>
+        <button class="mode-button {{ 'active' if group.mode == 'off' else '' }}"
+                data-mode="off" onclick="setGroupMode(this, 'off')">Off</button>
+        <button class="mode-button {{ 'active' if group.mode == 'auto' else '' }}"
+                data-mode="auto" onclick="setGroupMode(this, 'auto')">Auto</button>
+      </div>
+    </div>
+
+    {% if group.switches %}
+    <div class="card-content">
+      <table class="switch-table">
+        <colgroup>
+          <col class="col-name">
+          <col class="col-state">
+          <col class="col-mode">
+          <col class="col-status">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Light</th>
+            <th>State</th>
+            <th>Mode</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sw_id, sw in group.switches.items() %}
+          <tr data-switch-id="{{ sw.id }}" data-switch-name="{{ sw.name }}" data-group-id="{{ group.id }}">
+            <td class="switch-name">{{ sw.name }}</td>
+            <td class="switch-state">
+              <span class="status-indicator {{ 'status-indicator--active' if sw.is_on else 'status-indicator--inactive' }}"
+                    data-field="indicator"></span>
+              <span class="status-label {{ 'on' if sw.is_on else 'off' }}" data-field="state">
+                {{ 'ON' if sw.is_on else 'OFF' }}
+              </span>
+            </td>
+            <td class="switch-mode">
+              <div class="button-group button-group--small {{ 'disabled' if sw.group_controls_mode else '' }}"
+                   data-field="mode-buttons">
+                <button class="mode-button mode-button--small {{ 'active' if sw.mode == 'on' else '' }}"
+                        data-mode="on"
+                        {{ 'disabled' if sw.group_controls_mode else '' }}
+                        onclick="setSwitchMode(this, 'on')">On</button>
+                <button class="mode-button mode-button--small {{ 'active' if sw.mode == 'off' else '' }}"
+                        data-mode="off"
+                        {{ 'disabled' if sw.group_controls_mode else '' }}
+                        onclick="setSwitchMode(this, 'off')">Off</button>
+                <button class="mode-button mode-button--small {{ 'active' if sw.mode == 'auto' else '' }}"
+                        data-mode="auto"
+                        {{ 'disabled' if sw.group_controls_mode else '' }}
+                        onclick="setSwitchMode(this, 'auto')">Auto</button>
+              </div>
+            </td>
+            <td class="switch-status">
+              <span class="reason-text" data-field="reason">{{ sw.reason if sw.mode != 'auto' or sw.system_state else '' }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
