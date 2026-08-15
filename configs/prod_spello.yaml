@@ -3,7 +3,7 @@
 General:
   AppName: Spello Lights
   CheckInterval: 20
-  DisableAllSwitches: True
+  DisableAllSwitches: False
 
 Website:
   Enable: True
