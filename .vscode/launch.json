@@ -6,7 +6,7 @@
     "configurations": [
 
         {
-            "name": "Python Debugger: main",
+            "name": "Run main with dev",
             "type": "debugpy",
             "request": "launch",
             "program": "src/main.py",
@@ -15,6 +15,17 @@
             "postDebugTask": "clean-env",
             "envFile": "${workspaceFolder}/.env",
             "args": ["--config", "configs/development.yaml"]
-        }
+        },
+        {
+            "name": "Run main with prod",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/main.py",
+            "console": "integratedTerminal",
+            "preLaunchTask": "build-env",
+            "postDebugTask": "clean-env",
+            "envFile": "${workspaceFolder}/.env",
+            "args": ["--config", "configs/prod_spello_laptop.yaml"]
+        }        
     ]
 }
