@@ -5,6 +5,7 @@ General:
   AppName: LightingControl Dev
   # Number of seconds to wait before checking the schedules again
   CheckInterval: 4
+  DisableAllSwitches: False
 
 Website:
   Enable: True
@@ -15,8 +16,7 @@ Website:
 ViewerWebsite:
   # Enable or disable posting to the web viewer app
   Enable: False
-  # BaseURL: http://192.168.86.249:8000
-  BaseURL: https://power.elseyworld.com
+  BaseURL: http://127.0.0.1:8000
   APITimeout: 20
   # How often to post the state to the web viewer app (in seconds)
   Frequency: 10
@@ -32,7 +32,7 @@ SCSmartDevices:
   SimulationFileFolder: simulation_data
   ShellyWebhooks:
     Enabled: True
-    Host: 192.168.86.47
+    Host: 192.168.86.10
     Port: 8787
     Path: /shelly/webhook
     DefaultWebhooks:
@@ -40,115 +40,87 @@ SCSmartDevices:
         - input.toggle_on
         - input.toggle_off
   Devices:
-    - Name: Spello Dev
+    - Name: Spello Kitchen
       Model: Shelly2PMG3
-      Hostname: 192.168.86.30
-      Simulate: True
-      Inputs:
-        - Name: "Spello Dev I1"
-          Webhooks: True
-        - Name: "Spello Dev I2"
-      Outputs:
-        - Name: "Spello Dev S1"
-          Group: Patio
-        - Name: "Spello Dev S2"
-          Group: Patio
-    - Name: Sydney Dev B
-      Model: Tasmota
-      Hostname: 192.168.86.37
-      Simulate: True
       ExpectOffline: True
-      Outputs:
-        - Name: "Sydney Dev B O1"
-          Group: "Nighttime"
-      Meters:
-        - Name: "Sydney Dev B M1"
-    - Name: Spello Mock A
-      Model: Shelly2PMG3
       Simulate: True
+      Hostname: 192.168.86.37
+      Outputs:
+        - Name: Spello Kitchen Patio
+          Group: Patio
+        - Name: Spello Driveway
+          Group: Driveway
+    - Name: Spello Main Entry
+      Model: Shelly2PMG3
+      ExpectOffline: True
+      Simulate: True
+      Hostname: 192.168.86.38
+      Outputs:
+        - Name: Spello Living Room
+          Group: Living Room
+        - Name: Spello Front Door
+          Group: Patio
+    - Name: Spello Patio
+      Model: Shelly2LG3
+      ExpectOffline: True
+      Simulate: False
+      Hostname: 192.168.86.36
       Inputs:
-        - Name: "Spello A.I1"
-        - Name: "Spello A.I2"
+        - Name: Spello Patio Rear Input
+          Webhooks: True
+        - Name: Spello Patio Front Input
+          Webhooks: True
       Outputs:
-        - Name: "Spello A.1"
-        - Name: "Spello A.2"
-    - Name: Spello Mock B
-      Model: Shelly2PMG3
-      Simulate: True
-      Outputs:
-        - Name: "Spello B.1"
-          Group: Nighttime
-        - Name: "Spello B.2"
-          Group: Nighttime
-    - Name: Spello Mock C
-      Model: Shelly2PMG3
-      Simulate: True
-      Outputs:
-        - Name: "Spello C.1"
-          Group: Nighttime
-        - Name: "Spello C.2"
-          Group: Nighttime
-
+        - Name: Spello Patio Rear
+          Group: Patio
+        - Name: Spello Patio Front
+          Group: Patio
 
 Location:
-  Timezone: Australia/Sydney
-  GoogleMapsURL: https://www.google.com/maps/place/Sydney+NSW/@-33.8478053,150.602357,10z
+  Timezone: Europe/Rome
+  Latitude: 42.7500
+  Longitude: 12.7000
 
-
-# Define one or more lighting schedules that are used to control the light switches and groups defined under LightingControl
 Schedules:
-  - Name: Normal Lighting
+  - Name: Patio Lights
     Events: 
-      - TurnOn: "08:10"
-        TurnOff: "08:30"
+      - TurnOn: "Dusk-00:30"
+        TurnOff: "Dawn-01:00"
+        RandomOffset: 8
         DaysOfWeek: All
-      - TurnOn: "10:10"
-        TurnOff: "23:30"
-        DaysOfWeek: All
-  - Name: Dusk to Dawn
+  - Name: Driveway Lights
     Events: 
-      - TurnOn: Dusk
-        TurnOff: Dawn-00:30
-        RandomOffset: 60
-        DaysOfWeek: Sat,Sun,Tue
-      - TurnOn: "08:00"
-        TurnOff: "18:00"
-        RandomOffset: 30
-        DaysOfWeek: Sat,Sun
-        DatesOff: 
-        - StartDate: 2024-07-01
-          EndDate: 2024-08-30
-  - Name: Patio
-    Events: 
-      - TurnOn: "10:00"
-        TurnOff: "20:30"
+      - TurnOn: "Dusk-00:15"
+        TurnOff: "23:45"
+        RandomOffset: 10
         DaysOfWeek: All
-
-# Maps switches or groups of switches to a lighting schedule
+  - Name: Living Room
+    Events: 
+      - TurnOn: "Dusk-01:30"
+        TurnOff: "Dawn-04:00"
+        RandomOffset: 10
+        DaysOfWeek: All
+          
 LightingControl:
   - Type: Default
-    Schedule: Normal Lighting
-  - Type: Switch
-    Target: Spello A.1
-    Schedule: Normal Lighting
-  - Type: Switch Group
-    Target: Nighttime
-    Schedule: Dusk to Dawn
+    Schedule: Patio Lights
   - Type: Switch Group
     Target: Patio
-    Schedule: Patio
+    Schedule: Patio Lights
+  - Type: Switch Group
+    Target: Driveway
+    Schedule: Driveway Lights
+  - Type: Switch Group
+    Target: Living Room
+    Schedule: Living Room
 
-# Optional. Map Shelly inputs to lighting control actions. If an input is mapped to a switch or switch group 
-# then the lights in that target will be On when the input is on, regardless of the schedule 
 InputControls:
   - Type: Switch   
-    Target: Spello Dev S1
-    Input: Spello Dev I1
-  - Type: Switch Group
-    Target: Nighttime
-    Input: Spello Dev I2
-  # - Type: Default
-  #   Input: Spello A.I1
+    Target: Spello Patio Rear
+    Input: Spello Patio Rear Input
+  - Type: Switch   
+    Target: Spello Patio Front
+    Input: Spello Patio Front Input
 
 
 Files:

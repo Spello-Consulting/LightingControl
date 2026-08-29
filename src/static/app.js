@@ -52,7 +52,6 @@
         btn.classList.toggle("active", btn.getAttribute("data-mode") === group.mode);
       });
 
-      var groupControlsMode = group.mode !== "auto";
       var switches = group.switches || {};
       Object.keys(switches).forEach(function (swName) {
         var sw = switches[swName];
@@ -73,9 +72,7 @@
 
         var modeGroup = row.querySelector('[data-field="mode-buttons"]');
         if (modeGroup) {
-          modeGroup.classList.toggle("disabled", groupControlsMode);
           modeGroup.querySelectorAll(".mode-button").forEach(function (btn) {
-            btn.disabled = groupControlsMode;
             btn.classList.toggle("active", btn.getAttribute("data-mode") === sw.mode);
           });
         }

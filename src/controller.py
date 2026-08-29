@@ -103,7 +103,9 @@ class LightingController:
     def set_switch_mode(self, switch_name: str, mode: AppMode) -> bool:
         """Set the webapp override mode for an individual switch. Thread-safe.
 
-        Only has effect when the switch's group is in AUTO mode.
+        An individual switch override outranks its group's mode, so this is
+        allowed regardless of the group's current AppMode (issue #25). Changing
+        the group mode later re-syncs all member switches, clearing this override.
 
         Args:
             switch_name: The name of the switch to update.
@@ -116,9 +118,6 @@ class LightingController:
             sw = self._find_switch_state(switch_name)
             if sw is None:
                 return False
-            group = self._find_group(sw.get("Group", ""))
-            if group and group["AppMode"] != AppMode.AUTO:
-                return False  # Group override takes precedence; client should not allow this
             sw["AppMode"] = mode
         self._notify_webapp()
         self.wake_event.set()
@@ -171,7 +170,6 @@ class LightingController:
                         "mode": str(sw.get("AppMode", AppMode.AUTO)),
                         "system_state": str(sw.get("SystemState", "")),
                         "reason": str(sw.get("StateReason", "")),
-                        "group_controls_mode": group["AppMode"] != AppMode.AUTO,
                     }
                 groups_out[g_name] = {
                     "name": g_name,
@@ -471,7 +469,7 @@ class LightingController:
 
     # ── Schedule evaluation ───────────────────────────────────────────────────
 
-    def _evaluate_switch_states(self) -> list:  # noqa: PLR0912, PLR0915
+    def _evaluate_switch_states(self) -> list:  # noqa: PLR0912, PLR0914, PLR0915
         """Evaluate desired state for every switch using the 4-level priority chain.
 
         Priority (highest first):
@@ -530,8 +528,23 @@ class LightingController:
                 group = self._find_group(state.get("Group", ""))
                 group_mode = group["AppMode"] if group else AppMode.AUTO
                 switch_mode = state.get("AppMode", AppMode.AUTO)
+                disable_all = bool(self.config.get("General", "DisableAllSwitches"))
 
-                # Priority 1: webapp switch override
+                # A freshly-drained webhook toggle reflects the input more recently
+                # than the polled view snapshot, so let it win over input_state.
+                if webhook_event == "ON":
+                    input_is_on = True
+                elif webhook_event == "OFF":
+                    input_is_on = False
+                else:
+                    input_is_on = input_state == "ON"
+
+                # The switch would be OFF here unless something turns it on: the schedule
+                # is off, the group forces it off, or all switches are globally disabled.
+                # An input override only adds light on top of that baseline.
+                baseline_off = scheduled_state == "OFF" or group_mode == AppMode.OFF or disable_all
+
+                # Priority 1: webapp switch override (individual, explicit)
                 if switch_mode == AppMode.ON:
                     state["SystemState"] = SystemState.WEBAPP_SWITCH_OVERRIDE
                     state["StateReason"] = StateReasonOn.WEBAPP_SWITCH_ON
@@ -540,7 +553,14 @@ class LightingController:
                     state["SystemState"] = SystemState.WEBAPP_SWITCH_OVERRIDE
                     state["StateReason"] = StateReasonOff.WEBAPP_SWITCH_OFF
                     state["DesiredState"] = "OFF"
-                # Priority 2: webapp group override
+                # Priority 2: input override (individual) — outranks the group so a switch
+                # can be forced on even when its group is Off (issue #25). A released
+                # input (OFF) falls through to the group/schedule below.
+                elif input_is_on and baseline_off:
+                    state["SystemState"] = SystemState.INPUT_OVERRIDE
+                    state["StateReason"] = StateReasonOn.INPUT_SWITCH_ON
+                    state["DesiredState"] = "ON"
+                # Priority 3: webapp group override
                 elif group_mode == AppMode.ON:
                     state["SystemState"] = SystemState.WEBAPP_GROUP_OVERRIDE
                     state["StateReason"] = StateReasonOn.WEBAPP_GROUP_ON
@@ -549,18 +569,8 @@ class LightingController:
                     state["SystemState"] = SystemState.WEBAPP_GROUP_OVERRIDE
                     state["StateReason"] = StateReasonOff.WEBAPP_GROUP_OFF
                     state["DesiredState"] = "OFF"
-                # Priority 3: input override
-                elif input_state == "ON" and (scheduled_state == "OFF" or self.config.get("General", "DisableAllSwitches")):
-                    state["SystemState"] = SystemState.INPUT_OVERRIDE
-                    state["StateReason"] = StateReasonOn.INPUT_SWITCH_ON
-                    state["DesiredState"] = "ON"
-                elif input_state == "OFF" and webhook_event is None and scheduled_state == "OFF" and detail.get("reason") != "DatesOff" and not self.config.get("General", "DisableAllSwitches"):
-                    # Input went OFF and schedule is OFF: revert
-                    state["SystemState"] = SystemState.SCHEDULED
-                    state["StateReason"] = StateReasonOff.SCHEDULED_OFF
-                    state["DesiredState"] = "OFF"
                 # Priority 4: global override (issue 18)
-                elif self.config.get("General", "DisableAllSwitches"):
+                elif disable_all:
                     state["SystemState"] = SystemState.GLOBAL_OVERRIDE
                     state["StateReason"] = StateReasonOff.GLOBAL_OVERRIDE
                     state["DesiredState"] = "OFF"

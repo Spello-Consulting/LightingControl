@@ -56,19 +56,15 @@
               </span>
             </td>
             <td class="switch-mode">
-              <div class="button-group button-group--small {{ 'disabled' if sw.group_controls_mode else '' }}"
-                   data-field="mode-buttons">
+              <div class="button-group button-group--small" data-field="mode-buttons">
                 <button class="mode-button mode-button--small {{ 'active' if sw.mode == 'on' else '' }}"
                         data-mode="on"
-                        {{ 'disabled' if sw.group_controls_mode else '' }}
                         onclick="setSwitchMode(this, 'on')">On</button>
                 <button class="mode-button mode-button--small {{ 'active' if sw.mode == 'off' else '' }}"
                         data-mode="off"
-                        {{ 'disabled' if sw.group_controls_mode else '' }}
                         onclick="setSwitchMode(this, 'off')">Off</button>
                 <button class="mode-button mode-button--small {{ 'active' if sw.mode == 'auto' else '' }}"
                         data-mode="auto"
-                        {{ 'disabled' if sw.group_controls_mode else '' }}
                         onclick="setSwitchMode(this, 'auto')">Auto</button>
               </div>
             </td>
