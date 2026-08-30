@@ -544,8 +544,15 @@ class LightingController:
                 # An input override only adds light on top of that baseline.
                 baseline_off = scheduled_state == "OFF" or group_mode == AppMode.OFF or disable_all
 
+                # Priority 1: input override (individual) — outranks the group so a switch
+                # can be forced on even when its group is Off (issue #25). A released
+                # input (OFF) falls through to the group/schedule below.
+                if input_is_on and baseline_off:
+                    state["SystemState"] = SystemState.INPUT_OVERRIDE
+                    state["StateReason"] = StateReasonOn.INPUT_SWITCH_ON
+                    state["DesiredState"] = "ON"
                 # Priority 1: webapp switch override (individual, explicit)
-                if switch_mode == AppMode.ON:
+                elif switch_mode == AppMode.ON:
                     state["SystemState"] = SystemState.WEBAPP_SWITCH_OVERRIDE
                     state["StateReason"] = StateReasonOn.WEBAPP_SWITCH_ON
                     state["DesiredState"] = "ON"
@@ -553,13 +560,6 @@ class LightingController:
                     state["SystemState"] = SystemState.WEBAPP_SWITCH_OVERRIDE
                     state["StateReason"] = StateReasonOff.WEBAPP_SWITCH_OFF
                     state["DesiredState"] = "OFF"
-                # Priority 2: input override (individual) — outranks the group so a switch
-                # can be forced on even when its group is Off (issue #25). A released
-                # input (OFF) falls through to the group/schedule below.
-                elif input_is_on and baseline_off:
-                    state["SystemState"] = SystemState.INPUT_OVERRIDE
-                    state["StateReason"] = StateReasonOn.INPUT_SWITCH_ON
-                    state["DesiredState"] = "ON"
                 # Priority 3: webapp group override
                 elif group_mode == AppMode.ON:
                     state["SystemState"] = SystemState.WEBAPP_GROUP_OVERRIDE
@@ -591,25 +591,31 @@ class LightingController:
         return self.switch_states
 
     def _drain_webhook_events_for(self, input_name: str | None) -> str | None:
-        """Pull all pending webhook events and return the last relevant one for input_name.
+        """Pull all pending webhook events for a specific input and return the most recent one.
+
+        Only events for ``input_name`` are pulled from the worker's queue; events
+        for other inputs are left in place so the switch that owns them can consume
+        them (issue #25). When ``input_name`` is None (the switch has no assigned
+        input) nothing is pulled.
 
         Args:
-            input_name: The name of the input to check for events.
+            input_name: The name of the input to check for events, or None.
 
         Returns:
             "ON", "OFF", or None if no relevant event was found.
         """
+        if input_name is None:
+            return None
+
         last_event = None
         while True:
-            event = self.smart_device_worker.pull_webhook_event()
+            event = self.smart_device_worker.pull_webhook_event(component_name=input_name)
             if not event:
                 break
-            event_input = event.get("Component", {}).get("Name")
-            if event_input == input_name:
-                if event.get("Event") == "input.toggle_on":
-                    last_event = "ON"
-                elif event.get("Event") == "input.toggle_off":
-                    last_event = "OFF"
+            if event.get("Event") == "input.toggle_on":
+                last_event = "ON"
+            elif event.get("Event") == "input.toggle_off":
+                last_event = "OFF"
         return last_event
 
     def _refresh_device_status(self) -> bool:

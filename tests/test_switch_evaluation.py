@@ -136,7 +136,31 @@ def make_controller(
     worker = MagicMock()
     worker.get_latest_status.return_value = view
     events = list(webhook_events or [])
-    worker.pull_webhook_event.side_effect = lambda: events.pop(0) if events else None
+
+    def pull_webhook_event(
+        component_name: str | None = None, **_kwargs: Any
+    ) -> dict[str, Any] | None:
+        """Emulate the worker: pop the oldest queued event matching the filter.
+
+        Args:
+            component_name: If given, only return events for this input.
+            _kwargs: Other filter kwargs the real method accepts (ignored here).
+
+        Returns:
+            The matching event dict, or None when the queue holds no match.
+        """
+        match = next(
+            (
+                i
+                for i, event in enumerate(events)
+                if component_name is None
+                or event.get("Component", {}).get("Name") == component_name
+            ),
+            None,
+        )
+        return events.pop(match) if match is not None else None
+
+    worker.pull_webhook_event.side_effect = pull_webhook_event
     ctrl.smart_device_worker = worker
 
     ctrl._get_schedule_by_name = lambda name: {"Name": name}  # type: ignore[method-assign]
@@ -273,6 +297,35 @@ def test_schedule_on_when_all_clear() -> None:
     assert state["DesiredState"] == "ON"
     assert state["SystemState"] == SystemState.SCHEDULED
     assert state["StateReason"] == StateReasonOn.SCHEDULED_ON
+
+
+def test_inputless_switch_does_not_drain_another_switchs_events() -> None:
+    """A switch with no input must not consume webhook events for another input (issue #25).
+
+    _drain_webhook_events_for(None) must pull nothing, so the toggle-on queued for
+    "I1" survives for S2 to consume when its group is Off.
+    """
+    ctrl = make_controller(
+        group_mode=AppMode.OFF,
+        scheduled_state="ON",
+        webhook_events=[_toggle_event("I1", on=True)],
+    )
+    # S1 (evaluated first) has no input; S2 owns input "I1".
+    ctrl.groups[0]["Switches"] = ["S1", "S2"]
+    ctrl.switch_states.append(
+        {
+            "Switch": "S2",
+            "Group": "G1",
+            "Schedule": "sched",
+            "AppMode": AppMode.AUTO,
+            "Input": "I1",
+        }
+    )
+    ctrl._evaluate_switch_states()
+    s2 = ctrl.switch_states[1]
+    assert s2["Switch"] == "S2"
+    assert s2["DesiredState"] == "ON"
+    assert s2["SystemState"] == SystemState.INPUT_OVERRIDE
 
 
 # ── Mode setters ────────────────────────────────────────────────────────────

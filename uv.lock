@@ -470,7 +470,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "sc-foundation-services", specifier = ">=3.3.0" },
-    { name = "sc-smart-device", specifier = ">=3.3.0" },
+    { name = "sc-smart-device", specifier = ">=3.3.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
 ]
 
@@ -956,15 +956,15 @@ wheels = [
 
 [[package]]
 name = "sc-smart-device"
-version = "3.3.0"
+version = "3.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
     { name = "sc-foundation-services" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/48/764150d4a88d12ae51df334791a81c30337912641fd1bd0b29006645cebd/sc_smart_device-3.3.0.tar.gz", hash = "sha256:5572501bb5717fc6ad904fdca25ca0fe92c8ff9d50933f459e867ba35e4b9760", size = 46767, upload-time = "2026-08-05T16:38:31.473Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/6e/aafa0493bb9397e8023a18cc4b109e29d92d658a4e0d3fbd44479bf07ac9/sc_smart_device-3.3.1.tar.gz", hash = "sha256:358c1440147431679cfdcc8868be33a87f370aa7bff13f741936319f5efdfc2c", size = 48749, upload-time = "2026-08-30T13:58:43.814Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/a1/04c948ade933d843e66a95f454c73b89d028025a34df7a59d5271e954fcc/sc_smart_device-3.3.0-py3-none-any.whl", hash = "sha256:9121ca0fd0bf511409129aa059c7877a20afba61c1831317818e1ac041ce1356", size = 45469, upload-time = "2026-08-05T16:38:30.118Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/79/92a0348ade3c6cdc2ce27a4a7fa60f61ce12e6aab1be161967369e947828/sc_smart_device-3.3.1-py3-none-any.whl", hash = "sha256:fbab4b4ff5dd5b6c71fb63ff05d1ead7228eaf64f02fb8e6aaf4ebb63455df0a", size = 46129, upload-time = "2026-08-30T13:58:42.637Z" },
 ]
 
 [[package]]
