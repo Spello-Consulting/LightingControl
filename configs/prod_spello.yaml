@@ -20,6 +20,7 @@ SCSmartDevices:
   SimulationFileFolder: simulation_files
   ShellyWebhooks:
     Enabled: True
+    DrainFirst: True
     Host: 192.168.86.234
     Port: 8787
     Path: /shelly/webhook

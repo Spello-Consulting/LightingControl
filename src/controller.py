@@ -598,6 +598,10 @@ class LightingController:
         them (issue #25). When ``input_name`` is None (the switch has no assigned
         input) nothing is pulled.
 
+        If the SCSmartDevices.ShellyWebhooks.DrainFirst confguration option is True
+        then this method will return the first matching event in the queue. If False
+        it'll drain the queue and return the last.
+
         Args:
             input_name: The name of the input to check for events, or None.
 
@@ -606,6 +610,8 @@ class LightingController:
         """
         if input_name is None:
             return None
+
+        drain_first = self.config.get("SCSmartDevices", "ShellyWebhooks", "DrainFirst") or False
 
         last_event = None
         while True:
@@ -616,6 +622,9 @@ class LightingController:
                 last_event = "ON"
             elif event.get("Event") == "input.toggle_off":
                 last_event = "OFF"
+
+            if last_event and drain_first:
+                break
         return last_event
 
     def _refresh_device_status(self) -> bool:

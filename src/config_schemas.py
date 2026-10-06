@@ -38,6 +38,11 @@ class ConfigSchema:
             },
             "SCSmartDevices": {
                 "schema": {
+                    "ShellyWebhooks": {
+                        "schema": {
+                            "DrainFirst": {"type": "boolean", "required": False, "nullable": True},
+                        },
+                    },
                     "Devices": {
                         "schema": {
                             "schema": {

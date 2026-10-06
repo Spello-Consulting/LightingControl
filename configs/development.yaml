@@ -31,6 +31,7 @@ SCSmartDevices:
   PingAllowed: True
   SimulationFileFolder: simulation_data
   ShellyWebhooks:
+    DrainFirst: True
     Enabled: True
     Host: 192.168.86.10
     Port: 8787
