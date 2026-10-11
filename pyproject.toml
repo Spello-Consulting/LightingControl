@@ -17,8 +17,8 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
 ]
 
-[dependency-groups]
-dev = [
+[project.optional-dependencies]
+all = [
     "httpx>=0.28",
     "pytest>=8.0",
 ]

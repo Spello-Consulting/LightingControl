@@ -33,7 +33,7 @@ SCSmartDevices:
   ShellyWebhooks:
     DrainFirst: True
     Enabled: True
-    Host: 192.168.86.10
+    Host: 192.168.86.47
     Port: 8787
     Path: /shelly/webhook
     DefaultWebhooks:
@@ -65,7 +65,7 @@ SCSmartDevices:
       Model: Shelly2LG3
       ExpectOffline: True
       Simulate: False
-      Hostname: 192.168.86.36
+      Hostname: 192.168.86.30
       Inputs:
         - Name: Spello Patio Rear Input
           Webhooks: True
