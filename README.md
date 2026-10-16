@@ -204,6 +204,13 @@ Configure the web interface for the LightingControl utility. This is optional bu
 | Port | Port to listen on. |
 | PageAutoRefresh | Do a full refresh of the webpage (to pick up and configuration changes) every X seconds. |
 
+The web interface has these pages:
+
+- **Home** (`/`) — the status of each group and light, with manual mode overrides.
+- **System** (`/system`) — the application version (from `pyproject.toml`), git branch, status (ahead/behind upstream, based on the last fetch) and count of uncommitted changes, plus basic OS information and light counts. Git rows are omitted when the app isn't running from a git checkout. A **Logs** button opens the log viewer.
+- **Log** (`/log`) — the full contents of the application log file (`Files: LogfileName`). Tick **Live updates** to follow new lines as they are written (like `tail -f`, polled every second; the choice is remembered per browser), and use **Download** to save a copy. The JSON endpoint `/log/content` and `/log/download` are protected by the same access key as the other pages.
+- **Config** (`/config`) — the raw contents of the active YAML config file.
+
 ### Section: SCSmartDevices
 
 In this section you can configure one or more Shelly and/or Tasmota smart switches. See the [Smart Devices library](https://nickelseyspelloc.github.io/sc-smart-device/) for details on how to configure this section.
