@@ -23,7 +23,7 @@ SCSmartDevices:
       Model: Tasmota
       Simulate: False
       ExpectOffline: True
-      Hostname: 192.168.86.37
+      Hostname: 192.168.87.25
       Outputs:
         - Name: Media Center Light
           Group: Living Room
@@ -31,7 +31,7 @@ SCSmartDevices:
       Model: Tasmota
       Simulate: False
       ExpectOffline: True
-      Hostname: 192.168.86.41
+      Hostname: 192.168.87.26
       Outputs:
         - Name: Breakfast Area Light
           Group: Living Room
@@ -39,7 +39,7 @@ SCSmartDevices:
       Model: Tasmota
       Simulate: False
       ExpectOffline: True
-      Hostname: 192.168.86.51
+      Hostname: 192.168.87.27
       Outputs:
         - Name: Master Bed Light
           Group: Master Bed
@@ -47,7 +47,7 @@ SCSmartDevices:
       Model: Tasmota
       Simulate: False
       ExpectOffline: True
-      Hostname: 192.168.86.52
+      Hostname: 192.168.87.28
       Outputs:
         - Name: Studio Light
           Group: Studio
