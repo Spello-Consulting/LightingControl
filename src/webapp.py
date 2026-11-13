@@ -86,9 +86,15 @@ class _WebAppNotifier:
         self.queue = queue
 
     def notify(self) -> None:
+        """Ask the webapp to broadcast a state update. Safe to call from any thread.
+
+        A no-op if the webapp's event loop is not bound yet or has already closed.
+        The second case happens during SIGTERM shutdown, when a controller tick that
+        was already in progress finishes after the web server has stopped.
+        """
         loop = self.loop
         queue = self.queue
-        if loop is None or queue is None:
+        if loop is None or queue is None or loop.is_closed():
             return
 
         def _enqueue() -> None:
@@ -96,7 +102,9 @@ class _WebAppNotifier:
                 if queue is not None:
                     queue.put_nowait(None)
 
-        loop.call_soon_threadsafe(_enqueue)
+        # The loop can close between the is_closed() check and this call.
+        with contextlib.suppress(RuntimeError):
+            loop.call_soon_threadsafe(_enqueue)
 
 
 class _NoCacheStaticFiles(StaticFiles):

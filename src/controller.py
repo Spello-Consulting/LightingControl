@@ -827,9 +827,17 @@ class LightingController:
         return None
 
     def _notify_webapp(self):
-        """Notify the web application of state changes."""
+        """Notify the web application of state changes.
+
+        A failed notification is logged and otherwise ignored, so a problem in the
+        webapp (e.g. its event loop closing during shutdown) never crashes the
+        controller thread.
+        """
         if self._webapp_notify:
-            self._webapp_notify()
+            try:
+                self._webapp_notify()
+            except Exception as e:  # noqa: BLE001
+                self.logger.log_message(f"Failed to notify webapp: {describe_exception(e)}", "warning")
 
     def _get_schedule_by_name(self, name: str) -> dict | None:
         """Get a schedule by name.

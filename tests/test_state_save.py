@@ -12,6 +12,7 @@ from __future__ import annotations
 # This test module deliberately exercises private controller internals and lives
 # outside a package, so silence those two test-only lints for the whole file.
 # ruff: noqa: INP001, SLF001
+import asyncio
 import sys
 import threading
 from pathlib import Path
@@ -157,3 +158,28 @@ def test_describe_exception_formats_chain() -> None:
         _raise_chained()
     assert describe_exception(exc_info.value) == "RuntimeError <- ValueError: bad value"
     assert describe_exception(OSError("disk full")) == "OSError: disk full"
+
+
+def test_notifier_ignores_closed_event_loop() -> None:
+    """The webapp notifier is a no-op once its event loop has closed (SIGTERM shutdown)."""
+    from webapp import _WebAppNotifier  # noqa: PLC0415, PLC2701
+
+    loop = asyncio.new_event_loop()
+    notifier = _WebAppNotifier()
+    notifier.bind(loop, asyncio.Queue(maxsize=1))
+    loop.close()
+
+    notifier.notify()  # previously raised RuntimeError: Event loop is closed
+
+
+def test_notify_webapp_failure_does_not_crash_controller(tmp_path: Path) -> None:
+    """A failing webapp notifier is logged as a warning, not raised to the controller thread."""
+    ctl = make_controller(tmp_path / "system_state.json")
+    ctl._webapp_notify = MagicMock(side_effect=RuntimeError("Event loop is closed"))
+
+    ctl._notify_webapp()
+
+    ctl.logger.log_message.assert_called_once()
+    message, level = ctl.logger.log_message.call_args.args
+    assert level == "warning"
+    assert "Event loop is closed" in message
