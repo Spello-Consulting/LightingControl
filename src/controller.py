@@ -6,7 +6,7 @@ import random
 import re
 from collections.abc import Callable
 from pathlib import Path
-from threading import Event, RLock
+from threading import Event, Lock, RLock
 
 from sc_foundation import (
     DateHelper,
@@ -33,6 +33,29 @@ TRIM_LOGFILE_INTERVAL = dt.timedelta(hours=2)
 _REQUIRED_STATE_KEYS = {"SchemaVersion", "StateFileType", "RandomOffsets", "SwitchEvents"}
 
 
+def describe_exception(e: BaseException) -> str:
+    """Describe an exception, including its chained cause.
+
+    ``JSONEncoder.save_to_file`` re-raises errors as a bare ``RuntimeError`` (no message)
+    chained from the original, so ``str(e)`` alone is empty.
+
+    Args:
+        e: The exception to describe.
+
+    Returns:
+        A string such as ``"RuntimeError <- FileNotFoundError: [Errno 2] ..."``.
+    """
+    parts: list[str] = []
+    seen: set[int] = set()
+    current: BaseException | None = e
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        text = str(current)
+        parts.append(f"{type(current).__name__}: {text}" if text else type(current).__name__)
+        current = current.__cause__ or current.__context__
+    return " <- ".join(parts)
+
+
 class LightingController:
     def __init__(self, config: SCConfigManager, logger: SCLogger, smart_device_worker: SmartDeviceWorker, wake_event: Event):
         self.config = config
@@ -50,6 +73,13 @@ class LightingController:
 
         # Protects groups and switch_states for webapp reads/writes
         self._state_lock = RLock()
+
+        # Serialises state-file writes. The controller thread and ThreadManager.stop_all()
+        # (main thread) can both trigger a save during shutdown; concurrent writers share
+        # the same .tmp file and the loser fails with FileNotFoundError.
+        self._save_lock = Lock()
+        self._shutdown_lock = Lock()
+        self._shutdown_done = False
 
         # Internal maps (rebuilt by _initialise)
         self._schedule_map: dict[str, str] = {}   # switch_name -> schedule_name
@@ -183,7 +213,16 @@ class LightingController:
             return {"groups": groups_out}
 
     def shutdown(self):
-        """Shutdown the controller, performing any necessary cleanup."""
+        """Shutdown the controller, performing any necessary cleanup.
+
+        Safe to call more than once and from multiple threads: it is invoked both by the
+        controller thread when its run loop exits and by ``ThreadManager.stop_all()``
+        from the main thread. Only the first call does any work.
+        """
+        with self._shutdown_lock:
+            if self._shutdown_done:
+                return
+            self._shutdown_done = True
         self.logger.log_message("Shutting down Lighting Controller...", "summary")
         self._save_state()
 
@@ -423,36 +462,41 @@ class LightingController:
         return False
 
     def _save_state(self):
-        """Save current state (random offsets, switch events) to the state file."""
-        self._trim_switch_events()
+        """Save current state (random offsets, switch events) to the state file.
+
+        Writes are serialised with ``_save_lock`` so that concurrent callers never race
+        on the shared temporary file.
+        """
         assert isinstance(self.state_filepath, Path), "State file path must be a Path object"
-        try:
-            config_schedules = self.config.get("Schedules", default=[])
-            schedules = copy.deepcopy(config_schedules) if isinstance(config_schedules, list) else []
+        with self._save_lock:
+            self._trim_switch_events()
+            try:
+                config_schedules = self.config.get("Schedules", default=[])
+                schedules = copy.deepcopy(config_schedules) if isinstance(config_schedules, list) else []
 
-            with self._state_lock:
-                switch_states_copy = copy.deepcopy(self.switch_states)
-                groups_copy = copy.deepcopy(self.groups)
+                with self._state_lock:
+                    switch_states_copy = copy.deepcopy(self.switch_states)
+                    groups_copy = copy.deepcopy(self.groups)
 
-            state_data = {
-                "SchemaVersion": SCHEMA_VERSION,
-                "StateFileType": "LightingControl",
-                "LastStateSaveTime": DateHelper.now(),
-                "DeviceType": "LightingController",
-                "DeviceName": self.config.get("General", "AppName", default="LightingControl"),
-                "LastStatusMessage": "State saved successfully.",
-                "Dawn": self.dusk_dawn.get("dawn"),  # type: ignore  # noqa: PGH003
-                "Dusk": self.dusk_dawn.get("dusk"),  # type: ignore  # noqa: PGH003
-                "RandomOffsets": self.offset_cache,
-                "SwitchStates": switch_states_copy,
-                "Groups": groups_copy,
-                "Schedules": schedules,
-                "SwitchEvents": self.switch_events,
-            }
-            JSONEncoder.save_to_file(state_data, self.state_filepath)
-        except (OSError, TypeError, ValueError, RuntimeError) as e:
-            self.logger.log_fatal_error(f"Failed to save state file: {e}")
-            return
+                state_data = {
+                    "SchemaVersion": SCHEMA_VERSION,
+                    "StateFileType": "LightingControl",
+                    "LastStateSaveTime": DateHelper.now(),
+                    "DeviceType": "LightingController",
+                    "DeviceName": self.config.get("General", "AppName", default="LightingControl"),
+                    "LastStatusMessage": "State saved successfully.",
+                    "Dawn": self.dusk_dawn.get("dawn"),  # type: ignore  # noqa: PGH003
+                    "Dusk": self.dusk_dawn.get("dusk"),  # type: ignore  # noqa: PGH003
+                    "RandomOffsets": self.offset_cache,
+                    "SwitchStates": switch_states_copy,
+                    "Groups": groups_copy,
+                    "Schedules": schedules,
+                    "SwitchEvents": self.switch_events,
+                }
+                JSONEncoder.save_to_file(state_data, self.state_filepath)
+            except (OSError, TypeError, ValueError, RuntimeError) as e:
+                self.logger.log_fatal_error(f"Failed to save state file {self.state_filepath}: {describe_exception(e)}")
+                return
 
         post_state_to_web_viewer(self.config, self.logger, state_data)
 
