@@ -212,12 +212,24 @@ class LightingController:
                 }
             return {"groups": groups_out}
 
+    def stop(self) -> None:
+        """Wake the main loop so it sees the stop event and exits.
+
+        ``ThreadManager.stop_all()`` calls the first of ``stop``/``shutdown``/``close``
+        it finds on the instance behind a thread's bound-method target. Providing
+        ``stop()`` means it never calls ``shutdown()`` directly from the main thread
+        while a tick may still be running; ``run()`` calls ``shutdown()`` itself once
+        the current tick has finished. Do not call ``shutdown()`` or do any cleanup here.
+        """
+        self.wake_event.set()
+
     def shutdown(self):
         """Shutdown the controller, performing any necessary cleanup.
 
-        Safe to call more than once and from multiple threads: it is invoked both by the
-        controller thread when its run loop exits and by ``ThreadManager.stop_all()``
-        from the main thread. Only the first call does any work.
+        Normally called only by ``run()`` on the controller thread once its loop exits
+        (``stop()`` keeps ``ThreadManager.stop_all()`` from calling it). It is still
+        safe to call more than once and from several threads: only the first call does
+        any work.
         """
         with self._shutdown_lock:
             if self._shutdown_done:
@@ -756,8 +768,7 @@ class LightingController:
 
             self._summarise_schedule_evaluations()
             if not self._refresh_device_status():
-                self.wake_event.clear()
-                self.wake_event.wait(timeout=self.check_interval)
+                self._sleep_until_next_tick(stop_event)
                 continue
             self._evaluate_switch_states()
             self._change_switch_states()
@@ -765,14 +776,31 @@ class LightingController:
             self._save_state()
             self._notify_webapp()
 
-            self.wake_event.clear()
-            self.wake_event.wait(timeout=self.check_interval)
+            self._sleep_until_next_tick(stop_event)
 
             if not self.logger.ping_heartbeat():
                 self.logger.log_message("Heartbeat ping failed.", "error")
             self._trim_logfile_if_needed()
 
         self.shutdown()
+
+    def _sleep_until_next_tick(self, stop_event: Event | None) -> None:
+        """Sleep for one check interval, or until woken.
+
+        Clearing ``wake_event`` throws away any wake that arrived during the tick, so
+        check ``stop_event`` after clearing. Otherwise a SIGTERM that lands mid-tick
+        (the handler sets ``stop_event`` and then ``wake_event``) would be lost and the
+        loop would sleep a full interval before shutting down. Because the handler sets
+        ``stop_event`` before ``wake_event``, a stop that arrives after this check still
+        wakes the wait below.
+
+        Args:
+            stop_event: The run loop's stop event, or None when running without one.
+        """
+        self.wake_event.clear()
+        if stop_event is not None and stop_event.is_set():
+            return
+        self.wake_event.wait(timeout=self.check_interval)
 
     def _reload_config(self):
         """Re-apply updated configuration settings."""

@@ -24,7 +24,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from sc_foundation import JSONEncoder
+from sc_foundation import JSONEncoder, RestartPolicy, ThreadManager
 
 import controller as controller_module
 from controller import LightingController, describe_exception
@@ -183,3 +183,70 @@ def test_notify_webapp_failure_does_not_crash_controller(tmp_path: Path) -> None
     message, level = ctl.logger.log_message.call_args.args
     assert level == "warning"
     assert "Event loop is closed" in message
+
+
+def test_stop_all_calls_stop_not_shutdown(tmp_path: Path) -> None:
+    """ThreadManager.stop_all() picks the wake-only stop(), never shutdown()."""
+    ctl = make_controller(tmp_path / "system_state.json")
+    ctl.wake_event = threading.Event()
+    ctl._webapp_notify = None
+    ctl.shutdown = MagicMock()  # type: ignore[method-assign]
+
+    tm = ThreadManager(MagicMock(), global_stop=threading.Event())
+    # Any bound method of the controller exercises stop_all()'s target.__self__ lookup.
+    tm.add(name="controller", target=ctl._notify_webapp, restart=RestartPolicy(mode="never"))
+    tm.start_all()
+    tm.join_all(timeout_per_thread=5.0)
+    tm.stop_all()
+
+    assert ctl.wake_event.is_set()
+    ctl.shutdown.assert_not_called()
+
+
+def test_sigterm_mid_tick_shuts_down_on_controller_thread_after_tick(tmp_path: Path) -> None:
+    """If stop is requested mid-tick, shutdown waits for the tick and runs on the controller thread."""
+    ctl = make_controller(tmp_path / "system_state.json")
+    ctl.wake_event = threading.Event()
+    ctl.check_interval = 60
+    ctl.config_last_check = None
+    ctl.config.check_for_config_changes.return_value = None
+    ctl.logger.ping_heartbeat.return_value = True
+
+    tick_started = threading.Event()
+    release_tick = threading.Event()
+    calls: list[tuple[str, str]] = []
+
+    def blocking_change_switch_states() -> None:
+        tick_started.set()
+        assert release_tick.wait(timeout=5.0)
+        calls.append(("tick", threading.current_thread().name))
+
+    def record_save() -> None:
+        calls.append(("save", threading.current_thread().name))
+
+    for name in ("_print_to_console", "_summarise_schedule_evaluations", "_evaluate_switch_states",
+                 "_summarise_switch_states", "_notify_webapp", "_trim_logfile_if_needed"):
+        setattr(ctl, name, MagicMock())
+    ctl._refresh_device_status = MagicMock(return_value=True)  # type: ignore[method-assign]
+    ctl._change_switch_states = blocking_change_switch_states  # type: ignore[method-assign]
+    ctl._save_state = record_save  # type: ignore[method-assign]
+
+    stop_event = threading.Event()
+    tm = ThreadManager(MagicMock(), global_stop=stop_event)
+    tm.add(name="controller", target=ctl.run, kwargs={"stop_event": stop_event}, restart=RestartPolicy(mode="never"))
+    tm.start_all()
+    assert tick_started.wait(timeout=5.0)
+
+    # Simulate the SIGTERM handler, then main's finally: block, while the tick is still running.
+    stop_event.set()
+    ctl.wake_event.set()
+    tm.stop_all()
+    assert not ctl._shutdown_done, "shutdown() must not run while a tick is in progress"
+
+    release_tick.set()
+    tm.join_all(timeout_per_thread=5.0)
+
+    assert ctl._shutdown_done
+    # Tick work (and its own save) completes first; the final shutdown save comes last,
+    # on the controller thread, not the main thread.
+    assert calls == [("tick", "controller"), ("save", "controller"), ("save", "controller")]
