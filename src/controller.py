@@ -6,7 +6,7 @@ import random
 import re
 from collections.abc import Callable
 from pathlib import Path
-from threading import Event, RLock
+from threading import Event, Lock, RLock
 
 from sc_foundation import (
     DateHelper,
@@ -33,6 +33,29 @@ TRIM_LOGFILE_INTERVAL = dt.timedelta(hours=2)
 _REQUIRED_STATE_KEYS = {"SchemaVersion", "StateFileType", "RandomOffsets", "SwitchEvents"}
 
 
+def describe_exception(e: BaseException) -> str:
+    """Describe an exception, including its chained cause.
+
+    ``JSONEncoder.save_to_file`` re-raises errors as a bare ``RuntimeError`` (no message)
+    chained from the original, so ``str(e)`` alone is empty.
+
+    Args:
+        e: The exception to describe.
+
+    Returns:
+        A string such as ``"RuntimeError <- FileNotFoundError: [Errno 2] ..."``.
+    """
+    parts: list[str] = []
+    seen: set[int] = set()
+    current: BaseException | None = e
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        text = str(current)
+        parts.append(f"{type(current).__name__}: {text}" if text else type(current).__name__)
+        current = current.__cause__ or current.__context__
+    return " <- ".join(parts)
+
+
 class LightingController:
     def __init__(self, config: SCConfigManager, logger: SCLogger, smart_device_worker: SmartDeviceWorker, wake_event: Event):
         self.config = config
@@ -50,6 +73,13 @@ class LightingController:
 
         # Protects groups and switch_states for webapp reads/writes
         self._state_lock = RLock()
+
+        # Serialises state-file writes. The controller thread and ThreadManager.stop_all()
+        # (main thread) can both trigger a save during shutdown; concurrent writers share
+        # the same .tmp file and the loser fails with FileNotFoundError.
+        self._save_lock = Lock()
+        self._shutdown_lock = Lock()
+        self._shutdown_done = False
 
         # Internal maps (rebuilt by _initialise)
         self._schedule_map: dict[str, str] = {}   # switch_name -> schedule_name
@@ -182,8 +212,29 @@ class LightingController:
                 }
             return {"groups": groups_out}
 
+    def stop(self) -> None:
+        """Wake the main loop so it sees the stop event and exits.
+
+        ``ThreadManager.stop_all()`` calls the first of ``stop``/``shutdown``/``close``
+        it finds on the instance behind a thread's bound-method target. Providing
+        ``stop()`` means it never calls ``shutdown()`` directly from the main thread
+        while a tick may still be running; ``run()`` calls ``shutdown()`` itself once
+        the current tick has finished. Do not call ``shutdown()`` or do any cleanup here.
+        """
+        self.wake_event.set()
+
     def shutdown(self):
-        """Shutdown the controller, performing any necessary cleanup."""
+        """Shutdown the controller, performing any necessary cleanup.
+
+        Normally called only by ``run()`` on the controller thread once its loop exits
+        (``stop()`` keeps ``ThreadManager.stop_all()`` from calling it). It is still
+        safe to call more than once and from several threads: only the first call does
+        any work.
+        """
+        with self._shutdown_lock:
+            if self._shutdown_done:
+                return
+            self._shutdown_done = True
         self.logger.log_message("Shutting down Lighting Controller...", "summary")
         self._save_state()
 
@@ -423,36 +474,41 @@ class LightingController:
         return False
 
     def _save_state(self):
-        """Save current state (random offsets, switch events) to the state file."""
-        self._trim_switch_events()
+        """Save current state (random offsets, switch events) to the state file.
+
+        Writes are serialised with ``_save_lock`` so that concurrent callers never race
+        on the shared temporary file.
+        """
         assert isinstance(self.state_filepath, Path), "State file path must be a Path object"
-        try:
-            config_schedules = self.config.get("Schedules", default=[])
-            schedules = copy.deepcopy(config_schedules) if isinstance(config_schedules, list) else []
+        with self._save_lock:
+            self._trim_switch_events()
+            try:
+                config_schedules = self.config.get("Schedules", default=[])
+                schedules = copy.deepcopy(config_schedules) if isinstance(config_schedules, list) else []
 
-            with self._state_lock:
-                switch_states_copy = copy.deepcopy(self.switch_states)
-                groups_copy = copy.deepcopy(self.groups)
+                with self._state_lock:
+                    switch_states_copy = copy.deepcopy(self.switch_states)
+                    groups_copy = copy.deepcopy(self.groups)
 
-            state_data = {
-                "SchemaVersion": SCHEMA_VERSION,
-                "StateFileType": "LightingControl",
-                "LastStateSaveTime": DateHelper.now(),
-                "DeviceType": "LightingController",
-                "DeviceName": self.config.get("General", "AppName", default="LightingControl"),
-                "LastStatusMessage": "State saved successfully.",
-                "Dawn": self.dusk_dawn.get("dawn"),  # type: ignore  # noqa: PGH003
-                "Dusk": self.dusk_dawn.get("dusk"),  # type: ignore  # noqa: PGH003
-                "RandomOffsets": self.offset_cache,
-                "SwitchStates": switch_states_copy,
-                "Groups": groups_copy,
-                "Schedules": schedules,
-                "SwitchEvents": self.switch_events,
-            }
-            JSONEncoder.save_to_file(state_data, self.state_filepath)
-        except (OSError, TypeError, ValueError, RuntimeError) as e:
-            self.logger.log_fatal_error(f"Failed to save state file: {e}")
-            return
+                state_data = {
+                    "SchemaVersion": SCHEMA_VERSION,
+                    "StateFileType": "LightingControl",
+                    "LastStateSaveTime": DateHelper.now(),
+                    "DeviceType": "LightingController",
+                    "DeviceName": self.config.get("General", "AppName", default="LightingControl"),
+                    "LastStatusMessage": "State saved successfully.",
+                    "Dawn": self.dusk_dawn.get("dawn"),  # type: ignore  # noqa: PGH003
+                    "Dusk": self.dusk_dawn.get("dusk"),  # type: ignore  # noqa: PGH003
+                    "RandomOffsets": self.offset_cache,
+                    "SwitchStates": switch_states_copy,
+                    "Groups": groups_copy,
+                    "Schedules": schedules,
+                    "SwitchEvents": self.switch_events,
+                }
+                JSONEncoder.save_to_file(state_data, self.state_filepath)
+            except (OSError, TypeError, ValueError, RuntimeError) as e:
+                self.logger.log_fatal_error(f"Failed to save state file {self.state_filepath}: {describe_exception(e)}")
+                return
 
         post_state_to_web_viewer(self.config, self.logger, state_data)
 
@@ -712,8 +768,7 @@ class LightingController:
 
             self._summarise_schedule_evaluations()
             if not self._refresh_device_status():
-                self.wake_event.clear()
-                self.wake_event.wait(timeout=self.check_interval)
+                self._sleep_until_next_tick(stop_event)
                 continue
             self._evaluate_switch_states()
             self._change_switch_states()
@@ -721,14 +776,31 @@ class LightingController:
             self._save_state()
             self._notify_webapp()
 
-            self.wake_event.clear()
-            self.wake_event.wait(timeout=self.check_interval)
+            self._sleep_until_next_tick(stop_event)
 
             if not self.logger.ping_heartbeat():
                 self.logger.log_message("Heartbeat ping failed.", "error")
             self._trim_logfile_if_needed()
 
         self.shutdown()
+
+    def _sleep_until_next_tick(self, stop_event: Event | None) -> None:
+        """Sleep for one check interval, or until woken.
+
+        Clearing ``wake_event`` throws away any wake that arrived during the tick, so
+        check ``stop_event`` after clearing. Otherwise a SIGTERM that lands mid-tick
+        (the handler sets ``stop_event`` and then ``wake_event``) would be lost and the
+        loop would sleep a full interval before shutting down. Because the handler sets
+        ``stop_event`` before ``wake_event``, a stop that arrives after this check still
+        wakes the wait below.
+
+        Args:
+            stop_event: The run loop's stop event, or None when running without one.
+        """
+        self.wake_event.clear()
+        if stop_event is not None and stop_event.is_set():
+            return
+        self.wake_event.wait(timeout=self.check_interval)
 
     def _reload_config(self):
         """Re-apply updated configuration settings."""
@@ -783,9 +855,17 @@ class LightingController:
         return None
 
     def _notify_webapp(self):
-        """Notify the web application of state changes."""
+        """Notify the web application of state changes.
+
+        A failed notification is logged and otherwise ignored, so a problem in the
+        webapp (e.g. its event loop closing during shutdown) never crashes the
+        controller thread.
+        """
         if self._webapp_notify:
-            self._webapp_notify()
+            try:
+                self._webapp_notify()
+            except Exception as e:  # noqa: BLE001
+                self.logger.log_message(f"Failed to notify webapp: {describe_exception(e)}", "warning")
 
     def _get_schedule_by_name(self, name: str) -> dict | None:
         """Get a schedule by name.
