@@ -443,7 +443,7 @@ wheels = [
 
 [[package]]
 name = "lightingcontrol"
-version = "2.1.5"
+version = "2.2.2"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
