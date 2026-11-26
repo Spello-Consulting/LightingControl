@@ -36,6 +36,12 @@ if TYPE_CHECKING:
 
 _SRC_DIR = Path(__file__).resolve().parent
 
+# Maximum time uvicorn waits for in-flight connections to close during a graceful
+# shutdown before cancelling them. Without this bound, an open dashboard WebSocket
+# keeps the (non-daemon) web server thread alive indefinitely, which blocks the whole
+# process from exiting until it is SIGKILLed.
+WEB_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT = 5.0
+
 
 def validate_access_key(
     config: SCConfigManager, logger: SCLogger, key_from_request: str | None
@@ -220,7 +226,12 @@ def serve_asgi_blocking(
     port = int(config.get("Website", "Port", default=8080) or 8080)  # pyright: ignore[reportArgumentType]
 
     uv_config = uvicorn.Config(
-        app, host=host, port=port, log_level="warning", reload=False
+        app,
+        host=host,
+        port=port,
+        log_level="warning",
+        reload=False,
+        timeout_graceful_shutdown=int(WEB_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT),
     )
     server = uvicorn.Server(uv_config)
     server.install_signal_handlers = lambda: None  # type: ignore[method-assign]
